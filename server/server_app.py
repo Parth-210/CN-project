@@ -64,8 +64,6 @@ class ServerApp:
                         foreground="#e94560", background="#1a1a2e")
         style.configure("Info.TLabel", font=("Segoe UI", 11),
                         foreground="#eee", background="#16213e")
-        style.configure("Status.TLabel", font=("Segoe UI", 12, "bold"),
-                        foreground="#0f3460", background="#1a1a2e")
         style.configure("Card.TFrame", background="#16213e")
         style.configure("Accent.TButton", font=("Segoe UI", 11, "bold"))
 

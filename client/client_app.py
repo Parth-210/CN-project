@@ -25,7 +25,7 @@ from networking.connection import connect_to_server, close_connection
 from client.screen_viewer import ScreenViewer
 from client.input_capture import InputCapture
 from client.file_handler import send_file as client_send_file, receive_file
-from utils.helpers import get_local_ip, DEFAULT_PORT, RECV_DIR
+from utils.helpers import DEFAULT_PORT, RECV_DIR
 
 logger = logging.getLogger(__name__)
 

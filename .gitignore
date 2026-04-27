@@ -1,0 +1,19 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+
+# Received files from transfer
+received_files/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
