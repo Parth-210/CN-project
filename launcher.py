@@ -25,7 +25,7 @@ def launch_client():
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.title("RDP Simulation Launcher")
+    root.title("RDP")
     root.geometry("400x250")
     root.configure(bg="#1a1a2e")
     root.resizable(False, False)
