@@ -11,8 +11,8 @@ import sys
 # ---------------------------------------------------------------------------
 
 DEFAULT_PORT    = 5900       # Default RDP-sim port
-FPS             = 10         # Target frames per second
-JPEG_QUALITY    = 50         # JPEG compression quality (0-100)
+FPS             = 60         # Target frames per second
+JPEG_QUALITY    = 30         # JPEG compression quality (0-100)
 FILE_CHUNK_SIZE = 65536      # 64 KB per file-transfer chunk
 RECV_DIR        = "received_files"  # Default download folder name
 
