@@ -189,6 +189,26 @@ Run them directly — no Python installation required on the target machine.
 ```
 
 ---
+Architecture Overview
+
+```mermaid
+graph LR
+    subgraph Server Host
+        SC[Screen Capture] --> COMP[JPEG Compress]
+        COMP --> SEND[TCP Send]
+        RECV_S[TCP Recv] --> INPUT[Execute Mouse/Key]
+        RECV_S --> FILE_S[File Receiver]
+    end
+    subgraph Client Viewer
+        RECV_C[TCP Recv] --> RENDER[Tkinter Canvas]
+        CAPTURE[Input Capture] --> SEND_C[TCP Send]
+        FILE_C[File Sender] --> SEND_C
+    end
+    SEND -- FRAME packets --> RECV_C
+    SEND_C -- MOUSE/KEY/FILE packets --> RECV_S
+```
+
+---
 
 ## Viva Talking Points
 
