@@ -1,1 +1,1 @@
-from .protocol import MessageType, send_message, recv_message
+from .protocol import MsgType, send_msg, recv_msg

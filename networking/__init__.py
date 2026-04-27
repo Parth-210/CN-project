@@ -1,1 +1,1 @@
-from .connection import create_server, accept_client, connect_to_server, close_connection
+from .connection import create_srv, accept_cli, connect_srv, close_conn

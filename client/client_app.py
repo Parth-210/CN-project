@@ -1,228 +1,132 @@
-"""
-RDP Simulation — Client Application
-
-Tkinter GUI that:
-  - Connects to the RDP server via IP + port
-  - Displays the remote screen in real-time
-  - Captures mouse/keyboard input and forwards to server
-  - Supports bidirectional file transfer
-"""
-
-import json
-import threading
+import json, threading, os, sys, logging
 import tkinter as tk
 from tkinter import ttk, filedialog
-import logging
-import os
-import sys
 
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _ROOT not in sys.path: sys.path.insert(0, _ROOT)
 
-from protocol.protocol import MessageType, send_message, recv_message
-from networking.connection import connect_to_server, close_connection
+from protocol.protocol import MsgType, send_msg, recv_msg
+from networking.connection import connect_srv, close_conn
 from client.screen_viewer import ScreenViewer
 from client.input_capture import InputCapture
-from client.file_handler import send_file as client_send_file, receive_file
-from utils.helpers import DEFAULT_PORT, RECV_DIR
-
-logger = logging.getLogger(__name__)
-
+from client.file_handler import send_file, receive_file
+from utils.helpers import PORT, RECV_DIR
 
 class ClientApp:
-    """Main client GUI and logic."""
-
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("RDP Client — Viewer")
+        self.root.title("RDP Viewer")
         self.root.geometry("1024x720")
         self.root.configure(bg="#1a1a2e")
-        self.root.minsize(640, 480)
+        self.sock, self.connected = None, False
+        self.sw, self.sh = 1, 1
+        self.lock = threading.Lock()
+        self._ui()
+        self.ic = InputCapture(self.view.can, self.lock)
 
-        # State
-        self.sock = None
-        self.connected = False
-        self.server_w = 1
-        self.server_h = 1
-        self._send_lock = threading.Lock()
+    def _ui(self):
+        st = ttk.Style()
+        st.theme_use("clam")
+        st.configure("T", font=("Segoe UI", 16, "bold"), foreground="#e94560", background="#1a1a2e")
+        st.configure("I", font=("Segoe UI", 10), foreground="#eee", background="#16213e")
+        st.configure("C", background="#16213e")
+        st.configure("B", font=("Segoe UI", 10, "bold"))
+        st.configure("S", font=("Segoe UI", 9), foreground="#aaa", background="#0f3460")
 
-        self._build_ui()
-
-        self.input_capture = InputCapture(self.viewer.canvas, self._send_lock)
-
-    # ------------------------------------------------------------------ UI
-    def _build_ui(self):
-        style = ttk.Style()
-        style.theme_use("clam")
-        style.configure("Title.TLabel", font=("Segoe UI", 16, "bold"),
-                        foreground="#e94560", background="#1a1a2e")
-        style.configure("Info.TLabel", font=("Segoe UI", 10),
-                        foreground="#eee", background="#16213e")
-        style.configure("Card.TFrame", background="#16213e")
-        style.configure("Accent.TButton", font=("Segoe UI", 10, "bold"))
-        style.configure("StatusBar.TLabel", font=("Segoe UI", 9),
-                        foreground="#aaa", background="#0f3460")
-
-        # Top bar
-        top = ttk.Frame(self.root, style="Card.TFrame", padding=8)
-        top.pack(fill="x", side="top")
-
-        ttk.Label(top, text="⚡ RDP Client", style="Title.TLabel",
-                  background="#16213e").pack(side="left", padx=(8, 20))
-
-        ttk.Label(top, text="Server IP:", style="Info.TLabel").pack(side="left", padx=(4, 2))
+        t = ttk.Frame(self.root, style="C", padding=8); t.pack(fill="x")
+        ttk.Label(t, text="⚡ RDP Client", style="T", background="#16213e").pack(side="left", padx=10)
+        
+        ttk.Label(t, text="IP:", style="I").pack(side="left")
         self.ip_var = tk.StringVar(value="127.0.0.1")
-        self.ip_entry = ttk.Entry(top, textvariable=self.ip_var, width=15,
-                                   font=("Segoe UI", 10))
-        self.ip_entry.pack(side="left", padx=2)
+        self.ip_ent = ttk.Entry(t, textvariable=self.ip_var, width=15); self.ip_ent.pack(side="left", padx=2)
+        
+        ttk.Label(t, text="Port:", style="I").pack(side="left", padx=5)
+        self.port_var = tk.StringVar(value=str(PORT))
+        self.port_ent = ttk.Entry(t, textvariable=self.port_var, width=6); self.port_ent.pack(side="left", padx=2)
 
-        ttk.Label(top, text="Port:", style="Info.TLabel").pack(side="left", padx=(8, 2))
-        self.port_var = tk.StringVar(value=str(DEFAULT_PORT))
-        self.port_entry = ttk.Entry(top, textvariable=self.port_var, width=6,
-                                     font=("Segoe UI", 10))
-        self.port_entry.pack(side="left", padx=2)
+        self.conn_btn = ttk.Button(t, text="🔗 Connect", style="B", command=self._connect)
+        self.conn_btn.pack(side="left", padx=5)
+        self.disc_btn = ttk.Button(t, text="✖ Disc", style="B", command=self._disc, state="disabled")
+        self.disc_btn.pack(side="left", padx=2)
+        self.file_btn = ttk.Button(t, text="📁 File", style="B", command=self._file_dlg, state="disabled")
+        self.file_btn.pack(side="left", padx=2)
 
-        self.connect_btn = ttk.Button(top, text="🔗 Connect", style="Accent.TButton",
-                                       command=self._connect)
-        self.connect_btn.pack(side="left", padx=8)
+        vf = tk.Frame(self.root, bg="#000"); vf.pack(fill="both", expand=1, padx=4, pady=2)
+        self.view = ScreenViewer(vf)
 
-        self.disconnect_btn = ttk.Button(top, text="✖ Disconnect", style="Accent.TButton",
-                                          command=self._disconnect, state="disabled")
-        self.disconnect_btn.pack(side="left", padx=4)
+        self.stat_var = tk.StringVar(value="Disconnected")
+        ttk.Label(self.root, textvariable=self.stat_var, style="S", anchor="w", padding=8).pack(fill="x", side="bottom")
 
-        self.file_btn = ttk.Button(top, text="📁 Send File", style="Accent.TButton",
-                                    command=self._send_file_dialog, state="disabled")
-        self.file_btn.pack(side="left", padx=4)
-
-        # Screen viewer
-        viewer_frame = tk.Frame(self.root, bg="#000000")
-        viewer_frame.pack(fill="both", expand=True, padx=4, pady=(2, 0))
-        self.viewer = ScreenViewer(viewer_frame)
-
-        # Status bar
-        self.status_var = tk.StringVar(value="Disconnected")
-        status_bar = ttk.Label(self.root, textvariable=self.status_var,
-                               style="StatusBar.TLabel", anchor="w", padding=(12, 4))
-        status_bar.pack(fill="x", side="bottom")
-
-    # --------------------------------------------------------------- Connect
     def _connect(self):
-        ip = self.ip_var.get().strip()
-        port = int(self.port_var.get())
-        self.status_var.set(f"Connecting to {ip}:{port} …")
-        threading.Thread(target=self._do_connect, args=(ip, port), daemon=True).start()
+        ip, p = self.ip_var.get().strip(), int(self.port_var.get())
+        self.stat_var.set(f"Connecting to {ip}:{p}...")
+        threading.Thread(target=self._do_conn, args=(ip, p), daemon=True).start()
 
-    def _do_connect(self, ip: str, port: int):
-        try:
-            self.sock = connect_to_server(ip, port)
-        except Exception as exc:
-            self.root.after(0, lambda: self.status_var.set(f"❌ Connection failed: {exc}"))
+    def _do_conn(self, ip, p):
+        try: self.sock = connect_srv(ip, p)
+        except Exception as e:
+            self.root.after(0, lambda: self.stat_var.set(f"❌ Failed: {e}"))
             return
-
         self.connected = True
-        self.root.after(0, lambda: self.status_var.set(f"🟢 Connected to {ip}:{port}"))
-        self.root.after(0, lambda: self.connect_btn.config(state="disabled"))
-        self.root.after(0, lambda: self.disconnect_btn.config(state="normal"))
-        self.root.after(0, lambda: self.file_btn.config(state="normal"))
-        self.root.after(0, lambda: self.ip_entry.config(state="disabled"))
-        self.root.after(0, lambda: self.port_entry.config(state="disabled"))
+        self.root.after(0, self._on_conn)
+        self._recv_loop()
 
-        # Receive loop
-        self._receive_loop()
+    def _on_conn(self):
+        self.stat_var.set(f"🟢 Connected")
+        self.conn_btn.config(state="disabled"); self.disc_btn.config(state="normal")
+        self.file_btn.config(state="normal"); self.ip_ent.config(state="disabled"); self.port_ent.config(state="disabled")
 
-    # --------------------------------------------------------------- Disconnect
-    def _disconnect(self):
+    def _disc(self):
         self.connected = False
         try:
-            with self._send_lock:
-                send_message(self.sock, MessageType.DISCONNECT)
-        except Exception:
-            pass
-        self.input_capture.stop()
-        close_connection(self.sock)
-        self.sock = None
-        self.status_var.set("Disconnected")
-        self.connect_btn.config(state="normal")
-        self.disconnect_btn.config(state="disabled")
-        self.file_btn.config(state="disabled")
-        self.ip_entry.config(state="normal")
-        self.port_entry.config(state="normal")
+            with self.lock: send_msg(self.sock, MsgType.DISCONNECT)
+        except: pass
+        self.ic.stop(); close_conn(self.sock); self.sock = None
+        self.stat_var.set("Disconnected")
+        self.conn_btn.config(state="normal"); self.disc_btn.config(state="disabled")
+        self.file_btn.config(state="disabled"); self.ip_ent.config(state="normal"); self.port_ent.config(state="normal")
 
-    # -------------------------------------------------------------- Receive
-    def _receive_loop(self):
+    def _recv_loop(self):
         while self.connected:
             try:
-                msg_type, data = recv_message(self.sock)
-            except (ConnectionError, ValueError, OSError):
-                break
+                mt, d = recv_msg(self.sock)
+                if mt == MsgType.SCREEN_INFO:
+                    m = json.loads(d); self.sw, self.sh = m["width"], m["height"]
+                    self.ic.start(self.sock, self.sw, self.sh)
+                elif mt == MsgType.FRAME: self.root.after(0, self._render, d)
+                elif mt == MsgType.FILE_META:
+                    p = receive_file(d, self.sock)
+                    self.root.after(0, lambda p=p: self.stat_var.set(f"📥 Received: {os.path.basename(p)}"))
+                elif mt == MsgType.DISCONNECT: break
+            except: break
+        if self.connected: self.root.after(0, self._disc)
 
-            if msg_type == MessageType.SCREEN_INFO:
-                try:
-                    info = json.loads(data)
-                    self.server_w = info["width"]
-                    self.server_h = info["height"]
-                    self.input_capture.start(self.sock, self.server_w, self.server_h)
-                    logger.info("Server screen: %dx%d", self.server_w, self.server_h)
-                except Exception:
-                    pass
+    def _render(self, b):
+        dw, dh = self.view.update(b)
+        ox, oy = self.view.offset()
+        self.ic.update(dw, dh, ox, oy)
 
-            elif msg_type == MessageType.FRAME:
-                # Schedule GUI update on main thread
-                self.root.after(0, self._render_frame, data)
+    def _file_dlg(self):
+        f = filedialog.askopenfilename()
+        if f: threading.Thread(target=self._do_send, args=(f,), daemon=True).start()
 
-            elif msg_type == MessageType.FILE_META:
-                try:
-                    path = receive_file(data, self.sock, save_dir=RECV_DIR)
-                    self.root.after(0, lambda p=path: self.status_var.set(f"📥 File received: {p}"))
-                except Exception as exc:
-                    self.root.after(0, lambda e=exc: self.status_var.set(f"❌ File error: {e}"))
-
-            elif msg_type == MessageType.DISCONNECT:
-                break
-
-        # Connection ended
-        if self.connected:
-            self.root.after(0, self._disconnect)
-
-    def _render_frame(self, jpeg_bytes: bytes):
-        dw, dh = self.viewer.update_frame(jpeg_bytes)
-        ox, oy = self.viewer.get_image_offset()
-        self.input_capture.update_display_info(dw, dh, ox, oy)
-
-    # ----------------------------------------------------------- File send
-    def _send_file_dialog(self):
-        filepath = filedialog.askopenfilename(title="Select file to send")
-        if not filepath:
-            return
-        threading.Thread(target=self._do_send_file, args=(filepath,), daemon=True).start()
-
-    def _do_send_file(self, filepath: str):
+    def _do_send(self, f):
         try:
-            with self._send_lock:
-                client_send_file(self.sock, filepath)
-            self.root.after(0, lambda: self.status_var.set(
-                f"📤 File sent: {os.path.basename(filepath)}"))
-        except Exception as exc:
-            self.root.after(0, lambda: self.status_var.set(f"❌ File send error: {exc}"))
+            with self.lock: send_file(self.sock, f)
+            self.root.after(0, lambda: self.stat_var.set(f"📤 Sent: {os.path.basename(f)}"))
+        except Exception as e: self.root.after(0, lambda: self.stat_var.set(f"❌ Error: {e}"))
 
-    # ----------------------------------------------------------------- Run
     def run(self):
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self.root.mainloop()
 
     def _on_close(self):
-        if self.connected:
-            self._disconnect()
+        if self.connected: self._disc()
         self.root.destroy()
 
-
 def main():
-    from utils.helpers import setup_logging
-    setup_logging()
-    app = ClientApp()
-    app.run()
+    from utils.helpers import setup_log
+    setup_log()
+    ClientApp().run()
 
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
