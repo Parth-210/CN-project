@@ -7,9 +7,6 @@ __pycache__/
 build/
 *.spec
 
-# Compiled executable (distribute separately, not via git)
-RDP.exe
-
 # Received files from transfer sessions
 received_files/
 
