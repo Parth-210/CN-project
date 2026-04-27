@@ -117,6 +117,14 @@ Enter the server's IP address and port, then click **🔗 Connect**.
 - **Transfer files**: Click **📁 Send File** on either side to send a file to the other
 - **Disconnect**: Click **✖ Disconnect** on client or **⏹ Stop** on server
 
+### 4. Start the Universal Launcher
+
+Alternatively, use the universal launcher to choose between Server and Client:
+
+```bash
+python launcher.py
+```
+
 ---
 
 ## Packaging as .exe (PyInstaller)
@@ -127,21 +135,23 @@ Enter the server's IP address and port, then click **🔗 Connect**.
 python -m pip install pyinstaller
 ```
 
-### Build Server Executable
+### Build Universal Executable
 
 ```bash
-pyinstaller --onefile --windowed --name RDP_Server run_server.py
+python -m PyInstaller --onefile --windowed --name RDP_Universal launcher.py
 ```
 
-### Build Client Executable
+### Build Separate Executables (Optional)
 
 ```bash
-pyinstaller --onefile --windowed --name RDP_Client run_client.py
+python -m PyInstaller --onefile --windowed --name RDP_Server run_server.py
+python -m PyInstaller --onefile --windowed --name RDP_Client run_client.py
 ```
 
 ### Output
 
 Executables will be in the `dist/` folder:
+- `dist/RDP_Universal.exe`
 - `dist/RDP_Server.exe`
 - `dist/RDP_Client.exe`
 
