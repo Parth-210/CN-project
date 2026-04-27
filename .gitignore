@@ -3,17 +3,19 @@ __pycache__/
 *.py[cod]
 *.pyo
 
-# PyInstaller build artifacts
+# PyInstaller artifacts
 build/
-dist/
 *.spec
 
-# Received files from transfer
+# Compiled executable (distribute separately, not via git)
+RDP.exe
+
+# Received files from transfer sessions
 received_files/
 
 # Logs
 *.log
 
-# OS files
+# OS metadata
 .DS_Store
 Thumbs.db
