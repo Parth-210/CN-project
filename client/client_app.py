@@ -27,35 +27,35 @@ class ClientApp:
     def _ui(self):
         st = ttk.Style()
         st.theme_use("clam")
-        st.configure("T", font=("Segoe UI", 16, "bold"), foreground="#e94560", background="#1a1a2e")
-        st.configure("I", font=("Segoe UI", 10), foreground="#eee", background="#16213e")
-        st.configure("C", background="#16213e")
-        st.configure("B", font=("Segoe UI", 10, "bold"))
-        st.configure("S", font=("Segoe UI", 9), foreground="#aaa", background="#0f3460")
+        st.configure("T.TLabel", font=("Segoe UI", 16, "bold"), foreground="#e94560", background="#1a1a2e")
+        st.configure("I.TLabel", font=("Segoe UI", 10), foreground="#eee", background="#16213e")
+        st.configure("C.TFrame", background="#16213e")
+        st.configure("B.TButton", font=("Segoe UI", 10, "bold"))
+        st.configure("S.TLabel", font=("Segoe UI", 9), foreground="#aaa", background="#0f3460")
 
-        t = ttk.Frame(self.root, style="C", padding=8); t.pack(fill="x")
-        ttk.Label(t, text="⚡ RDP Client", style="T", background="#16213e").pack(side="left", padx=10)
+        t = ttk.Frame(self.root, style="C.TFrame", padding=8); t.pack(fill="x")
+        ttk.Label(t, text="⚡ RDP Client", style="T.TLabel", background="#16213e").pack(side="left", padx=10)
         
-        ttk.Label(t, text="IP:", style="I").pack(side="left")
+        ttk.Label(t, text="IP:", style="I.TLabel").pack(side="left")
         self.ip_var = tk.StringVar(value="127.0.0.1")
         self.ip_ent = ttk.Entry(t, textvariable=self.ip_var, width=15); self.ip_ent.pack(side="left", padx=2)
         
-        ttk.Label(t, text="Port:", style="I").pack(side="left", padx=5)
+        ttk.Label(t, text="Port:", style="I.TLabel").pack(side="left", padx=5)
         self.port_var = tk.StringVar(value=str(PORT))
         self.port_ent = ttk.Entry(t, textvariable=self.port_var, width=6); self.port_ent.pack(side="left", padx=2)
 
-        self.conn_btn = ttk.Button(t, text="🔗 Connect", style="B", command=self._connect)
+        self.conn_btn = ttk.Button(t, text="🔗 Connect", style="B.TButton", command=self._connect)
         self.conn_btn.pack(side="left", padx=5)
-        self.disc_btn = ttk.Button(t, text="✖ Disc", style="B", command=self._disc, state="disabled")
+        self.disc_btn = ttk.Button(t, text="✖ Disc", style="B.TButton", command=self._disc, state="disabled")
         self.disc_btn.pack(side="left", padx=2)
-        self.file_btn = ttk.Button(t, text="📁 File", style="B", command=self._file_dlg, state="disabled")
+        self.file_btn = ttk.Button(t, text="📁 File", style="B.TButton", command=self._file_dlg, state="disabled")
         self.file_btn.pack(side="left", padx=2)
 
         vf = tk.Frame(self.root, bg="#000"); vf.pack(fill="both", expand=1, padx=4, pady=2)
         self.view = ScreenViewer(vf)
 
         self.stat_var = tk.StringVar(value="Disconnected")
-        ttk.Label(self.root, textvariable=self.stat_var, style="S", anchor="w", padding=8).pack(fill="x", side="bottom")
+        ttk.Label(self.root, textvariable=self.stat_var, style="S.TLabel", anchor="w", padding=8).pack(fill="x", side="bottom")
 
     def _connect(self):
         ip, p = self.ip_var.get().strip(), int(self.port_var.get())

@@ -1,6 +1,5 @@
 import struct
 import enum
-import socket
 
 class MsgType(enum.IntEnum):
     FRAME = 1

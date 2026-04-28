@@ -30,7 +30,7 @@ if __name__ == "__main__":
     st.configure("Accent.TButton", font=("Segoe UI", 12, "bold"), padding=10)
     st.configure("Dark.TFrame", background="#1a1a2e")
 
-    ttk.Label(root, text="⚡ RDP Simulation", style="Title.TLabel").pack(pady=(30, 20))
+    ttk.Label(root, text="⚡ RDP Simulation!", style="Title.TLabel").pack(pady=(30, 20))
 
     f = ttk.Frame(root, padding=20, style="Dark.TFrame")
     f.pack(fill="both", expand=True)
@@ -38,5 +38,4 @@ if __name__ == "__main__":
     ttk.Button(f, text="🖥 Host", style="Accent.TButton", command=launch_srv).pack(fill="x", pady=5)
     ttk.Button(f, text="🔗 Viewer", style="Accent.TButton", command=launch_cli).pack(fill="x", pady=5)
 
-    ttk.Label(root, text="CN Lab Project — 2026", font=("Segoe UI", 9), foreground="#aaa", background="#1a1a2e").pack(pady=10)
     root.mainloop()

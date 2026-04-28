@@ -8,12 +8,12 @@ A simplified Remote Desktop Protocol simulation over LAN demonstrating **client-
 
 | Feature | Description |
 |---------|-------------|
-| 🖥️ Screen Sharing | Server captures and streams its screen to the client in real-time (JPEG, ~10 FPS) |
-| 🖱️ Mouse Control | Client captures mouse events (move, click, scroll) and replays them on the server |
-| ⌨️ Keyboard Control | Client captures key presses/releases and replays them on the server |
-| 📁 File Transfer | Bidirectional file transfer between client and server (chunked, any file type) |
-| 🎨 GUI | Tkinter-based GUI for both server and client |
-| 🔌 LAN Connectivity | Connects over TCP via IP address + port |
+| Screen Sharing | Server captures and streams its screen to the client in real-time (JPEG, ~10 FPS) |
+| Mouse Control | Client captures mouse events (move, click, scroll) and replays them on the server |
+| Keyboard Control | Client captures key presses/releases and replays them on the server |
+| File Transfer | Bidirectional file transfer between client and server (chunked, any file type) |
+| GUI | Tkinter-based GUI for both server and client |
+| LAN Connectivity | Connects over TCP via IP address + port |
 
 ---
 
@@ -186,26 +186,6 @@ Run them directly — no Python installation required on the target machine.
 │                  │    DISCONNECT             │                  │
 │  Cleanup        ◄┼──────────────────────────┤  Cleanup         │
 └──────────────────┘                          └──────────────────┘
-```
-
----
-Architecture Overview
-
-```mermaid
-graph LR
-    subgraph Server Host
-        SC[Screen Capture] --> COMP[JPEG Compress]
-        COMP --> SEND[TCP Send]
-        RECV_S[TCP Recv] --> INPUT[Execute Mouse/Key]
-        RECV_S --> FILE_S[File Receiver]
-    end
-    subgraph Client Viewer
-        RECV_C[TCP Recv] --> RENDER[Tkinter Canvas]
-        CAPTURE[Input Capture] --> SEND_C[TCP Send]
-        FILE_C[File Sender] --> SEND_C
-    end
-    SEND -- FRAME packets --> RECV_C
-    SEND_C -- MOUSE/KEY/FILE packets --> RECV_S
 ```
 
 ---
